@@ -6,6 +6,7 @@
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply from: 'maven.gradle'
 
 android {
     compileSdkVersion 29
