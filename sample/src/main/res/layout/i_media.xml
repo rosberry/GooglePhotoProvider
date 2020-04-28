@@ -4,4 +4,5 @@
     android:layout_width="100dp"
     android:layout_height="100dp"
     android:contentDescription="@null"
+    android:background="@android:color/white"
     android:scaleType="centerCrop"/>
