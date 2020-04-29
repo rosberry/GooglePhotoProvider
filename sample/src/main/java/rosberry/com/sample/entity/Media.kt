@@ -13,7 +13,6 @@ import android.net.Uri
  */
 data class Media(
         val id: String,
-        val folderId: Long,
         val type: MediaType,
         val width: Int,
         val height: Int,

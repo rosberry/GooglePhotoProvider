@@ -81,15 +81,6 @@ class CloudMediaProvider(
         }
     }
 
-    fun getCloudMediaListByIds(ids: List<String>) = Single.create<List<CloudMedia>> { emitter ->
-        if (accessToken == null || isTokenExpired()) {
-            emitter.onError(TokenInvalidError())
-        } else {
-            val response = photosLibraryClient(accessToken!!).batchGetMediaItems(ids)
-            emitter.onSuccess(response.toCloudMediaList())
-        }
-    }
-
     fun handleSignInResult(signInData: Intent) = Completable.defer {
         val result: GoogleSignInResult = Auth.GoogleSignInApi.getSignInResultFromIntent(signInData)
         if (result.isSuccess) {
@@ -332,8 +323,4 @@ class CloudMediaProvider(
         return page.values.filter { mediaItem -> mediaItem.isValidItem() }
     }
 
-    private fun BatchGetMediaItemsResponse.toCloudMediaList(): List<CloudMedia> {
-        return mediaItemResultsList.map { it.mediaItem }
-            .filter { mediaItem -> mediaItem != MediaItem.getDefaultInstance() && mediaItem.isValidItem() }
-    }
 }

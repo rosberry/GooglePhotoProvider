@@ -14,10 +14,17 @@ import rosberry.com.sample.entity.MediaType
 import rosberry.com.sample.tools.MediaUtil.asMediaType
 
 /**
- * @author Evgeniy Nagibin on 13/03/2020.
+ * @author Evgeniy Nagibin on 29/04/2020.
  */
 class MediaConverter {
-    fun convertCloudMedia(cloudMedia: CloudMedia): Media {
+
+    fun convertCloudMedia(items: List<CloudMedia>): List<Media> {
+        return items.asSequence()
+            .map { item -> convertCloudMedia(item) }
+            .toList()
+    }
+
+    private fun convertCloudMedia(cloudMedia: CloudMedia): Media {
         with(cloudMedia) {
             val mediaType = cloudMedia.asMediaType()
             val width = mediaMetadata.width.toInt()
@@ -26,8 +33,7 @@ class MediaConverter {
             val fullUri = Uri.parse(baseUrl.toFullPath(width, height, mediaType))
 
             return Media(
-                    Constant.GOOGLE_MEDIA_ITEM_ID_PREFIX.plus(id),
-                    Constant.GOOGLE_FOLDER_ID,
+                    id,
                     mediaType,
                     width,
                     height,
@@ -60,5 +66,4 @@ class MediaConverter {
                 MediaType.VIDEO -> this.plus("=dv")
                 else -> this
             }
-
 }

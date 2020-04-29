@@ -4,12 +4,11 @@
  *
  */
 
-package rosberry.com.sample
+package rosberry.com.sample.tools
 
 import com.google.gson.GsonBuilder
 import com.rosberry.android.googlephotoprovider.CloudMediaApi
 import io.reactivex.schedulers.Schedulers
-import okhttp3.Cache
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
@@ -21,8 +20,8 @@ import java.util.concurrent.TimeUnit
  */
 object CloudApiProvider {
 
-    private val timeoutTime = 60L
-    private val baseUrl = "https://www.googleapis.com/oauth2/v4/"
+    private const val timeoutTime = 60L
+    private const val baseUrl = "https://www.googleapis.com/oauth2/v4/"
 
     private val okHttpClient by lazy {
         OkHttpClient.Builder()
@@ -41,7 +40,8 @@ object CloudApiProvider {
 
     fun getCloudMediaApi(): CloudMediaApi {
         return Retrofit.Builder()
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(GsonConverterFactory.create(
+                    gson))
             .addCallAdapterFactory(RxJava2CallAdapterFactory.createWithScheduler(Schedulers.io()))
             .client(okHttpClient)
             .baseUrl(baseUrl)

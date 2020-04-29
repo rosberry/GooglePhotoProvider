@@ -4,17 +4,30 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorPrimaryDark"
+    android:background="#00333333"
     tools:context=".MainActivity">
 
-    <androidx.recyclerview.widget.RecyclerView android:layout_width="0dp"
+    <TextView android:id="@+id/mediaMessage"
+        android:layout_width="0dp"
         android:layout_height="0dp"
+        android:gravity="center"
+        android:text="@string/waiting"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/mediaList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:spanCount="3"
-        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-        tools:listitem="@layout/i_media"/>
+        tools:listitem="@layout/i_media" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
