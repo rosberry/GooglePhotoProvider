@@ -27,6 +27,6 @@ class MediaAdapter: RecyclerView.Adapter<MediaViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: MediaViewHolder, position: Int) {
-        holder.bind(mediaItems[position])
+        //holder.bind(mediaItems[position])
     }
 }
