@@ -16,9 +16,6 @@ data class Media(
         val type: MediaType,
         val width: Int,
         val height: Int,
-        val orientation: Int,
-        val duration: Long,
-        val dateModified: Long,
         val previewUri: Uri,
         val fullUri: Uri
 )

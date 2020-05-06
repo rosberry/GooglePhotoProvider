@@ -37,9 +37,6 @@ class MediaConverter {
                     mediaType,
                     width,
                     height,
-                    -1,
-                    -1,
-                    0,
                     previewUri,
                     fullUri
             )
