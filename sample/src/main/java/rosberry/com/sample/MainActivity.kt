@@ -22,10 +22,10 @@ import io.reactivex.Completable
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.a_main.*
-import rosberry.com.sample.tools.CloudApiProvider.getCloudMediaApi
 import rosberry.com.sample.converter.MediaConverter
 import rosberry.com.sample.entity.Media
 import rosberry.com.sample.entity.MediaPage
+import rosberry.com.sample.tools.CloudApiProvider.getCloudMediaApi
 import rosberry.com.sample.ui.EndlessScrollListener
 import rosberry.com.sample.ui.MediaAdapter
 import rosberry.com.sample.ui.MediaItemDecorator
@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> 
     }
 
     private val mediaAdapter by lazy {
-        val itemWidth = (resources.displayMetrics.widthPixels - padding * 2) / SPAN_COUNT
+        val itemWidth = (resources.displayMetrics.widthPixels - padding) / SPAN_COUNT
         MediaAdapter(itemWidth)
     }
 
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> 
 
         mediaList.addOnScrollListener(endlessScrollListener)
         mediaList.adapter = mediaAdapter
-        mediaList.addItemDecoration(MediaItemDecorator(padding / 2, SPAN_COUNT))
+        mediaList.addItemDecoration(MediaItemDecorator(padding, SPAN_COUNT))
 
         cloudMediaProvider.checkAuthorization(
                 onSignInRequired = { signInIntent ->

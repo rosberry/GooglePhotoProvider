@@ -24,11 +24,9 @@ class MediaItemDecorator(
         val frameWidth = ((parent.width - spacing * (spanCount - 1)) / spanCount)
         val padding = parent.width / spanCount - frameWidth
         val itemPosition = (view.layoutParams as RecyclerView.LayoutParams).viewAdapterPosition
-        if (itemPosition < spanCount) {
-            outRect.top = 0
-        } else {
-            outRect.top = spacing
-        }
+
+        outRect.top = spacing / 2
+
         if (itemPosition % spanCount == 0) {
             outRect.left = 0
             outRect.right = padding
@@ -38,7 +36,7 @@ class MediaItemDecorator(
             outRect.right = 0
             outRect.left = padding
         } else if (needLeftSpacing) {
-            needLeftSpacing = false
+            needLeftSpacing = true
             outRect.left = spacing - padding
             if ((itemPosition + 2) % spanCount == 0) {
                 outRect.right = spacing - padding
@@ -47,8 +45,8 @@ class MediaItemDecorator(
             }
         } else if ((itemPosition + 2) % spanCount == 0) {
             needLeftSpacing = false
-            outRect.left = spacing / 2
-            outRect.right = spacing - padding
+            outRect.left = spacing - padding
+            outRect.right = spacing / 2
         } else {
             needLeftSpacing = false
             outRect.left = spacing / 2
