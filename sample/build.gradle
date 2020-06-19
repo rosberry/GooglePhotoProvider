@@ -20,8 +20,11 @@ android {
         versionCode 1
         versionName "1.0"
 
-        buildConfigField 'String', 'OAUTH_СLIENT_ID', getOauthClientId()
-        buildConfigField 'String', 'OAUTH_СLIENT_SECRET', getOauthClientSecret()
+        def googlePhotosProperties = new Properties()
+        googlePhotosProperties.load(new FileInputStream(rootProject.file("sample/google_photos.properties")))
+
+        buildConfigField 'String', 'OAUTH_СLIENT_ID', googlePhotosProperties['oauthClientId']
+        buildConfigField 'String', 'OAUTH_СLIENT_SECRET', googlePhotosProperties['oauthClientSecret']
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -91,18 +94,4 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-}
-
-def getOauthClientId() {
-    def signing = rootProject.file("sample/google_photos.properties")
-    def keystoreProperties = new Properties()
-    keystoreProperties.load(new FileInputStream(signing))
-    return keystoreProperties['oauthClientId'] as String
-}
-
-def getOauthClientSecret() {
-    def signing = rootProject.file("sample/google_photos.properties")
-    def keystoreProperties = new Properties()
-    keystoreProperties.load(new FileInputStream(signing))
-    return keystoreProperties['oauthClientSecret'] as String
 }
