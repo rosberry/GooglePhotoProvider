@@ -17,7 +17,7 @@ import io.reactivex.schedulers.Schedulers
 import rosberry.com.sample.entity.Media
 import rosberry.com.sample.entity.MediaPage
 
-class GooglePaginator(
+class GooglePhotosPaginator(
         private val requestFactory: (Int, String?) -> Single<MediaPage>,
         private val viewController: ViewController<Media>
 ) {

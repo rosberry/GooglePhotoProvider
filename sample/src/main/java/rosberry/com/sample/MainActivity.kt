@@ -30,7 +30,7 @@ import rosberry.com.sample.ui.EndlessScrollListener
 import rosberry.com.sample.ui.MediaAdapter
 import rosberry.com.sample.ui.MediaItemDecorator
 
-class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> {
+class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<Media> {
 
     companion object {
         private const val signInRequestCode = 60000
@@ -50,12 +50,12 @@ class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> 
         MediaAdapter(itemWidth)
     }
 
-    private val googlePaginator by lazy {
-        GooglePaginator({ limit, token ->
+    private val googlePhotosPaginator by lazy {
+        GooglePhotosPaginator({ limit, token ->
             getMediaPageFromCloudSingle(
                     MediaTypeFilter.MediaType.ALL_MEDIA,
-                    limit = limit,
-                    nextPageToken = token
+                    limit,
+                    token
             )
         }, this)
     }
@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> 
     private val endlessScrollListener by lazy {
         object : EndlessScrollListener(mediaList.layoutManager!!) {
             override fun onLoadMore() {
-                googlePaginator.loadNewPage()
+                googlePhotosPaginator.loadNewPage()
             }
         }
     }
@@ -138,7 +138,7 @@ class MainActivity : AppCompatActivity(), GooglePaginator.ViewController<Media> 
                     {
                         Toast.makeText(this@MainActivity, "Successfully signed in", Toast.LENGTH_SHORT)
                             .show()
-                        googlePaginator.restart()
+                        googlePhotosPaginator.restart()
                     },
                     { throwable ->
                         Toast.makeText(this@MainActivity, "Sign in result error: ${throwable.message}",
