@@ -7,7 +7,7 @@ At first, you have to configure your project by enabling the API via the Google 
 Also, for using GooglePhotoProvider you have to add the dependency to Google Photos Java client library:
 ```gradle
 dependencies {
-     implementation 'com.google.photos.library:google-photos-library-client:1.5.0'
+     implementation 'com.google.photos.library:google-photos-library-client:ххх'
 }
 ```
 
