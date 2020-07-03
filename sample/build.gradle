@@ -70,8 +70,6 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:4.11.0"
     kapt "com.github.bumptech.glide:compiler:4.11.0"
 
-    api 'com.google.photos.library:google-photos-library-client:1.5.0'
-
     // network
     def retrofit_version = "2.6.2"
     def okHttp_version = "4.2.2"
