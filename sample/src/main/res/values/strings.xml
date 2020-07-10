@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Google Cloud Photos Sample</string>
+    <string name="waiting">Waiting for media from Google Photos…</string>
+    <string name="error">No media from Google Photos, sorry</string>
+</resources>
