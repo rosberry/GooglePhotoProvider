@@ -36,12 +36,14 @@ import com.rosberry.android.googlephotoprovider.exception.PhotoLibraryCreationEr
 import com.rosberry.android.googlephotoprovider.exception.SignInError
 import com.rosberry.android.googlephotoprovider.exception.TokenInvalidError
 import com.rosberry.android.googlephotoprovider.model.CloudMediaPage
+import com.rosberry.android.googlephotoprovider.network.HttpHandler
+import com.rosberry.android.googlephotoprovider.network.HttpHandler.fileName
+import com.rosberry.android.googlephotoprovider.network.ResponseMapper
+import com.rosberry.android.googlephotoprovider.response.GetAccessTokenResponse
 import io.reactivex.Completable
+import io.reactivex.CompletableEmitter
 import io.reactivex.Single
-import io.reactivex.schedulers.Schedulers
-import okhttp3.Call
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.reactivex.SingleEmitter
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -52,14 +54,12 @@ typealias CloudMedia = MediaItem
  */
 class CloudMediaProvider(
         private val context: Context,
-        private val photosApi: CloudMediaApi,
         private val clientId: String,
         private val clientSecret: String
 ) {
 
     private val tag = "GooglePhotoProvider"
     private val cache = Cache(context)
-    private val clientFactory = ClientFactory()
     private val fallbackExpirationTimeMs: Long = 60 * 1000
 
     private var photosClient: PhotosLibraryClient? = null
@@ -81,33 +81,56 @@ class CloudMediaProvider(
         }
     }
 
-    fun getCloudMediaListByIds(ids: List<String>) = Single.create<List<CloudMedia>> { emitter ->
-        if (accessToken == null || isTokenExpired()) {
-            emitter.onError(TokenInvalidError())
-        } else {
-            val response = photosLibraryClient(accessToken!!).batchGetMediaItems(ids)
-            emitter.onSuccess(response.toCloudMediaList())
-        }
-    }
+    fun getCloudMediaListByIds(ids: List<String>) =
+            Single.create<List<CloudMedia>> { emitter ->
+                if (accessToken == null || isTokenExpired()) {
+                    emitter.onError(TokenInvalidError())
+                } else {
+                    val response = photosLibraryClient(accessToken!!).batchGetMediaItems(
+                            ids
+                    )
+                    emitter.onSuccess(response.toCloudMediaList())
+                }
+            }
 
     fun handleSignInResult(signInData: Intent) = Completable.defer {
-        val result: GoogleSignInResult = Auth.GoogleSignInApi.getSignInResultFromIntent(signInData)
-        if (result.isSuccess) {
+        val result: GoogleSignInResult? = Auth.GoogleSignInApi.getSignInResultFromIntent(
+                signInData
+        )
+        if (result?.isSuccess == true) {
             return@defer handleSignInResult(result.signInAccount!!.serverAuthCode!!)
         } else {
-            val message = CommonStatusCodes.getStatusCodeString(result.status.statusCode)
+            val message = result?.status?.statusCode?.let {
+                CommonStatusCodes.getStatusCodeString(it)
+            } ?: ""
             return@defer Completable.error(SignInError(message))
         }
     }
 
-    fun handleSignInResult(authCode: String): Completable =
-            photosApi.accessToken(clientId, clientSecret, authCode)
-                .subscribeOn(Schedulers.io())
-                .doOnSuccess { response ->
-                    this.accessToken = response.accessToken
-                    this.tokenExpiresAt = response.expires.calculateTokenExpiration()
-                }
-                .ignoreElement()
+    fun handleSignInResult(authCode: String): Completable {
+        return Completable.create { emitter ->
+            val params = hashMapOf(
+                    "client_id" to clientId,
+                    "client_secret" to clientSecret,
+                    "code" to authCode,
+                    "grant_type" to "authorization_code"
+            )
+
+            HttpHandler.post(
+                    endpoint = "token",
+                    params = params,
+                    mapper = { jsonObject ->
+                        ResponseMapper.mapAccessToken(jsonObject)
+                    },
+                    success = { accessTokenResponse: GetAccessTokenResponse ->
+                        this@CloudMediaProvider.accessToken = accessTokenResponse.accessToken
+                        this@CloudMediaProvider.tokenExpiresAt = accessTokenResponse.expires.calculateTokenExpiration()
+                    },
+                    error = { t -> emitter.passEvent { emitter.onError(t) } },
+                    complete = { emitter.passEvent { emitter.onComplete() } }
+            )
+        }
+    }
 
     fun checkAuthorization(
             onSignInRequired: (Intent) -> Unit,
@@ -134,25 +157,50 @@ class CloudMediaProvider(
      * Returns a Single, which emits the local uri of the downloaded file.
      * If the downloaded file exists in cache storage, method returns the uri of the cached file.
      */
-    fun downloadMedia(mediaId: String, uri: Uri, progressListener: ProgressListener? = null): Single<Uri> {
-        var call: Call? = null
+    fun downloadMedia(
+            mediaId: String,
+            uri: Uri,
+            progressListener: ProgressListener? = null
+    ): Single<Uri> {
         return Single.create<Uri> { emitter ->
             cache.get(mediaId)
                 ?.run { emitter.onSuccess(this) }
-                ?: Request.Builder()
-                    .url(uri.toString())
-                    .build()
-                    .call(clientFactory.client(progressListener))
-                    .also { newCall -> call = newCall }
-                    .enqueue(
-                            { response ->
-                                cache.put(mediaId, response)
-                                    .run { if (!emitter.isDisposed) emitter.onSuccess(this) }
-                            },
-                            { error -> if (!emitter.isDisposed) emitter.onError(error) }
-                    )
+                ?: downloadFile(mediaId, uri, progressListener,
+                        success = { response ->
+                            val uri = cache.put(
+                                    mediaId,
+                                    response.contentType,
+                                    response.bytes.toByteArray()
+                            )
+                            emitter.passEvent {
+                                emitter.onSuccess(uri)
+                            }
+                        },
+                        error = { throwable ->
+                            emitter.passEvent { emitter.onError(throwable) }
+                        })
+
         }
-            .doOnDispose { call?.cancel() }
+    }
+
+    private fun downloadFile(
+            mediaId: String,
+            uri: Uri,
+            progressListener: ProgressListener?,
+            success: (HttpHandler.ResponseModel) -> Unit,
+            error: (Throwable) -> Unit
+    ) {
+        HttpHandler.downloadFile(
+                uri,
+                mediaId.fileName(),
+                progressListener,
+                success = { response ->
+                    success.invoke(response)
+                },
+                error = { throwable ->
+                    error.invoke(throwable)
+                }
+        )
     }
 
     private fun silentSignIn(
@@ -160,15 +208,28 @@ class CloudMediaProvider(
             onConnectionError: () -> Unit
     ) {
         val client = googleApiClient()
-        client.registerConnectionCallbacks(object : GoogleApiClient.ConnectionCallbacks {
+        client.registerConnectionCallbacks(object :
+                GoogleApiClient.ConnectionCallbacks {
 
             override fun onConnected(p0: Bundle?) {
-                val googleSignInResult = Auth.GoogleSignInApi.silentSignIn(client)
+                val googleSignInResult = Auth.GoogleSignInApi.silentSignIn(
+                        client
+                )
                 if (googleSignInResult.isDone) {
-                    checkSilentSignInResult(googleSignInResult.get(), onSilentSignIn, onConnectionError, client)
+                    checkSilentSignInResult(
+                            googleSignInResult.get(),
+                            onSilentSignIn,
+                            onConnectionError,
+                            client
+                    )
                 } else {
                     googleSignInResult.setResultCallback { result ->
-                        checkSilentSignInResult(result, onSilentSignIn, onConnectionError, client)
+                        checkSilentSignInResult(
+                                result,
+                                onSilentSignIn,
+                                onConnectionError,
+                                client
+                        )
                     }
                 }
 
@@ -198,8 +259,6 @@ class CloudMediaProvider(
             onConnectionError.invoke()
         }
     }
-
-    private fun Request.call(client: OkHttpClient): Call = client.newCall(this)
 
     private fun googleApiClient(): GoogleApiClient {
 
@@ -231,7 +290,11 @@ class CloudMediaProvider(
 
         try {
             settings = PhotosLibrarySettings.newBuilder()
-                .setCredentialsProvider(FixedCredentialsProvider.create(getUserCredentials(token)))
+                .setCredentialsProvider(
+                        FixedCredentialsProvider.create(
+                                getUserCredentials(token)
+                        )
+                )
                 .build()
         } catch (e: IOException) {
             throw PhotoLibraryCreationError(e)
@@ -241,12 +304,14 @@ class CloudMediaProvider(
             PhotosLibraryClient.initialize(settings)
                 .also {
                     photosClient = it
-                    Log.d(tag, "photosLibraryClient::photo client was initialized")
+                    Log.d(
+                            tag,
+                            "photosLibraryClient::photo client was initialized"
+                    )
                 }
         } catch (e: IOException) {
             throw PhotoLibraryCreationError(e)
         }
-
     }
 
     private fun getUserCredentials(token: String): Credentials {
@@ -258,7 +323,8 @@ class CloudMediaProvider(
             .build()
     }
 
-    private fun isTokenExpired(): Boolean = tokenExpiresAt == null || tokenExpiresAt!! < SystemClock.elapsedRealtime()
+    private fun isTokenExpired(): Boolean =
+            tokenExpiresAt == null || tokenExpiresAt!! < SystemClock.elapsedRealtime()
 
     private fun loadCloudPage(
             filterMode: MediaTypeFilter.MediaType,
@@ -275,7 +341,8 @@ class CloudMediaProvider(
                 .build()
 
             val cloudMediaList = mutableListOf<CloudMedia>()
-            var nextPageToken = if (isSearchMediaItemsRequestValid(limit)) startPageToken ?: ""
+            var nextPageToken = if (isSearchMediaItemsRequestValid(limit)) startPageToken
+                ?: ""
             else ""
 
             Log.d(tag, "loadCloudMedia::query with token: $nextPageToken")
@@ -294,10 +361,11 @@ class CloudMediaProvider(
 
                 cloudMediaList.addAll(mediaItemsPagedResponse.toCloudMediaList())
                 nextPageToken = mediaItemsPagedResponse.nextPageToken
-
             } while (cloudMediaList.size < limit && nextPageToken.isNotBlank())
 
-            emitter.onSuccess(CloudMediaPage(cloudMediaList, nextPageToken))
+            emitter.passEvent {
+                emitter.onSuccess(CloudMediaPage(cloudMediaList, nextPageToken))
+            }
         }
     }
 
@@ -316,11 +384,14 @@ class CloudMediaProvider(
             .andThen(loadCloudPage(filterMode, limit, startPageToken))
     }
 
-    private fun String.calculateTokenExpiration(): Long = SystemClock.elapsedRealtime() + this.castToMs()
+    private fun String.calculateTokenExpiration(): Long =
+            SystemClock.elapsedRealtime() + this.castToMs()
 
-    private fun String.castToMs(): Long = this.toLongOrNull()?.times(1000) ?: fallbackExpirationTimeMs
+    private fun String.castToMs(): Long =
+            this.toLongOrNull()?.times(1000) ?: fallbackExpirationTimeMs
 
-    private fun isSearchMediaItemsRequestValid(queriedSize: Int) = lastSearchMediaItemsReq?.pageSize == queriedSize
+    private fun isSearchMediaItemsRequestValid(queriedSize: Int) =
+            lastSearchMediaItemsReq?.pageSize == queriedSize
 
     private fun CloudMedia.isValidItem(): Boolean {
         return this.mediaMetadata.hasVideo()
@@ -335,5 +406,17 @@ class CloudMediaProvider(
     private fun BatchGetMediaItemsResponse.toCloudMediaList(): List<CloudMedia> {
         return mediaItemResultsList.map { it.mediaItem }
             .filter { mediaItem -> mediaItem != MediaItem.getDefaultInstance() && mediaItem.isValidItem() }
+    }
+
+    private fun CompletableEmitter.passEvent(action: () -> Unit) {
+        if (!this.isDisposed) {
+            action.invoke()
+        }
+    }
+
+    private fun <T> SingleEmitter<T>.passEvent(action: () -> Unit) {
+        if (!this.isDisposed) {
+            action.invoke()
+        }
     }
 }

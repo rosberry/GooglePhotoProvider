@@ -9,16 +9,15 @@ package com.rosberry.android.googlephotoprovider
 import android.content.Context
 import android.net.Uri
 import android.webkit.MimeTypeMap
-import okhttp3.Response
+import com.rosberry.android.googlephotoprovider.network.HttpHandler.fileName
 import java.io.File
-import java.util.UUID
 
 /**
  * @author Alexei Korshun on 2019-11-19.
  */
 internal class Cache(context: Context) {
 
-    private val cacheDir: File = File(context.cacheDir, "google_photo")
+    val cacheDir: File = File(context.cacheDir, "google_photo")
         .apply { mkdir() }
 
     internal fun get(mediaId: String): Uri? =
@@ -27,20 +26,12 @@ internal class Cache(context: Context) {
                 ?.absolutePath
                 ?.let { path -> Uri.parse(path) }
 
-    internal fun put(mediaId: String, response: Response): Uri {
-        val fileBytes = response.body()!!.byteStream()
-            .readBytes()
-
-        val extension: String = MimeTypeMap.getSingleton().getExtensionFromMimeType(response.header("content-type"))
+    internal fun put(mediaId: String, contentType: String, fileBytes: ByteArray): Uri {
+        val extension: String = MimeTypeMap.getSingleton().getExtensionFromMimeType(contentType)
             ?: throw IllegalStateException("Unknown media content type.")
 
         return File(cacheDir, "${mediaId.fileName()}.$extension")
             .also { file -> file.writeBytes(fileBytes) }
             .let { file -> Uri.fromFile(file) }
     }
-
-    private fun String.fileName(): String = this.byteInputStream()
-        .readBytes()
-        .let { bytes -> UUID.nameUUIDFromBytes(bytes) }
-        .toString()
 }
