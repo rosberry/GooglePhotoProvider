@@ -408,7 +408,7 @@ class CloudMediaProvider(
             .filter { mediaItem -> mediaItem != MediaItem.getDefaultInstance() && mediaItem.isValidItem() }
     }
 
-    fun JSONObject.mapAccessToken(): GetAccessTokenResponse {
+    private fun JSONObject.mapAccessToken(): GetAccessTokenResponse {
         return GetAccessTokenResponse(
                 optString("access_token"),
                 optString("expires_in")
