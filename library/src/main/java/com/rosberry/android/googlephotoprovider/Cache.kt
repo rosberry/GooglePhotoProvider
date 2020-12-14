@@ -17,7 +17,7 @@ import java.io.File
  */
 internal class Cache(context: Context) {
 
-    val cacheDir: File = File(context.cacheDir, "google_photo")
+    private val cacheDir: File = File(context.cacheDir, "google_photo")
         .apply { mkdir() }
 
     internal fun get(mediaId: String): Uri? =

@@ -38,12 +38,12 @@ import com.rosberry.android.googlephotoprovider.exception.TokenInvalidError
 import com.rosberry.android.googlephotoprovider.model.CloudMediaPage
 import com.rosberry.android.googlephotoprovider.network.HttpHandler
 import com.rosberry.android.googlephotoprovider.network.HttpHandler.fileName
-import com.rosberry.android.googlephotoprovider.network.ResponseMapper
 import com.rosberry.android.googlephotoprovider.response.GetAccessTokenResponse
 import io.reactivex.Completable
 import io.reactivex.CompletableEmitter
 import io.reactivex.Single
 import io.reactivex.SingleEmitter
+import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -120,7 +120,7 @@ class CloudMediaProvider(
                     endpoint = "token",
                     params = params,
                     mapper = { jsonObject ->
-                        ResponseMapper.mapAccessToken(jsonObject)
+                        jsonObject.mapAccessToken()
                     },
                     success = { accessTokenResponse: GetAccessTokenResponse ->
                         this@CloudMediaProvider.accessToken = accessTokenResponse.accessToken
@@ -406,6 +406,13 @@ class CloudMediaProvider(
     private fun BatchGetMediaItemsResponse.toCloudMediaList(): List<CloudMedia> {
         return mediaItemResultsList.map { it.mediaItem }
             .filter { mediaItem -> mediaItem != MediaItem.getDefaultInstance() && mediaItem.isValidItem() }
+    }
+
+    fun JSONObject.mapAccessToken(): GetAccessTokenResponse {
+        return GetAccessTokenResponse(
+                optString("access_token"),
+                optString("expires_in")
+        )
     }
 
     private fun CompletableEmitter.passEvent(action: () -> Unit) {
