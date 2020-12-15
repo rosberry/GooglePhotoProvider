@@ -13,6 +13,7 @@ import com.rosberry.android.googlephotoprovider.ProgressListener
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedWriter
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -108,16 +109,16 @@ object HttpHandler {
 
         // always check HTTP response code first
         if (responseCode == HttpURLConnection.HTTP_OK) {
-            val disposition = conn.getHeaderField("Content-Disposition")
             val contentType = conn.contentType
             val contentLength = conn.contentLength
 
             Log.d(TAG, "Content-Type = $contentType")
-            Log.d(TAG, "Content-Disposition = $disposition")
             Log.d(TAG, "Content-Length = $contentLength")
             Log.d(TAG, "fileName = $fileName")
             val inputStream = conn.inputStream
-            val bytes = conn.inputStream.readBytes().toList()
+            val bytes = conn.inputStream.readBytes(contentLength) { progress, done ->
+                progressListener?.update(progress, done)
+            }.toList()
             success?.invoke(ResponseModel(contentType, bytes))
             inputStream.close()
             Log.d(TAG, "File downloaded")
@@ -133,4 +134,36 @@ object HttpHandler {
         .readBytes()
         .let { bytes -> UUID.nameUUIDFromBytes(bytes) }
         .toString()
+
+    private fun InputStream.copyTo(
+            out: OutputStream,
+            length: Int,
+            progress: (progress: Long, Boolean) -> Unit
+    ): Long {
+        var bytesCopied: Long = 0
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var bytes = read(buffer)
+        while (bytes >= 0) {
+            out.write(buffer, 0, bytes)
+            bytesCopied += bytes
+            progress(((bytesCopied.toDouble() / length) * 100).toLong(), false)
+            bytes = read(buffer)
+        }
+        progress(1L, true)
+        return bytesCopied
+    }
+
+    private fun InputStream.readBytes(
+            contentLength: Int,
+            progress: (progress: Long, Boolean) -> Unit
+    ): ByteArray {
+        val buffer = ByteArrayOutputStream(
+                maxOf(
+                        DEFAULT_BUFFER_SIZE,
+                        this.available()
+                )
+        )
+        copyTo(buffer, contentLength, progress)
+        return buffer.toByteArray()
+    }
 }
