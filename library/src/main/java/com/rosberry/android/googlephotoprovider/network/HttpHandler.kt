@@ -118,7 +118,7 @@ object HttpHandler {
             val inputStream = conn.inputStream
             val bytes = conn.inputStream.readBytes(contentLength) { progress, done ->
                 progressListener?.update(progress, done)
-            }.toList()
+            }
             success?.invoke(ResponseModel(contentType, bytes))
             inputStream.close()
             Log.d(TAG, "File downloaded")
@@ -128,7 +128,26 @@ object HttpHandler {
         conn.disconnect()
     }
 
-    data class ResponseModel(val contentType: String, val bytes: List<Byte>)
+    // Since by default arrays are compared by reference we have to override `equals()` and `hashCode()`
+    data class ResponseModel(val contentType: String, val bytes: ByteArray) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as ResponseModel
+
+            if (contentType != other.contentType) return false
+            if (!bytes.contentEquals(other.bytes)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = contentType.hashCode()
+            result = 31 * result + bytes.contentHashCode()
+            return result
+        }
+    }
 
     fun String.fileName(): String = this.byteInputStream()
         .readBytes()

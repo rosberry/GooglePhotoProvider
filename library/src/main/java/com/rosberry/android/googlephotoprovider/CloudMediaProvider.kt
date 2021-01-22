@@ -167,13 +167,13 @@ class CloudMediaProvider(
                 ?.run { emitter.onSuccess(this) }
                 ?: downloadFile(mediaId, uri, progressListener,
                         success = { response ->
-                            val uri = cache.put(
+                            val fileUri = cache.put(
                                     mediaId,
                                     response.contentType,
-                                    response.bytes.toByteArray()
+                                    response.bytes
                             )
                             emitter.passEvent {
-                                emitter.onSuccess(uri)
+                                emitter.onSuccess(fileUri)
                             }
                         },
                         error = { throwable ->
