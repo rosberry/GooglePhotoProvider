@@ -1,6 +1,19 @@
 # GooglePhotoProvider
 
 GooglePhotoProvider is a library allows you to load all your Google Photos via Google Photos API. It wraps the loading photos process into a simple and easy to use interface.
+## Features
+
+- Helps you to download and manage all your Google Photos
+- Allows you to download Google Photos page by page
+- Google Sign-in is also integrated into this library
+- The great sample guides you to integrate this library into your project step by step
+- 
+## Requirements
+
+- Java 8+
+- Android API 21+
+- 
+## Setup
 
 At first, you have to configure your project by enabling the API via the Google API Console and setting up an OAuth 2.0 client ID. You can follow this [instructions](https://developers.google.com/photos/library/guides/get-started-java?hl=nl) for setting up your project.
 
@@ -22,5 +35,15 @@ Before querying any Google Photos request you should sign in user to their Googl
 
 # Getting user photos
 For retrieving user photos from Google Photos API you're able to use **getCloudMediaPage()** method from **CloudMediaProvider** class. As users might have a lot of photos in their gallery, it is highly recommended to use the pagination for getting photos from Google Photos API. You can pass any value to *limit* parameter that suits your needs. In the sample app, you can see our implementation of Google Paging library based on [this one](https://gitlab.com/terrakok/gitlab-client/blob/98167db3555012396e03027fb12b94b8ad8c923c/app/src/main/java/ru/terrakok/gitlabclient/presentation/global/Paginator.kt).
-# Compatibility
-Minimum Android SDK: *GooglePhotoProvider* requires a minimum API level of 21.
+
+## About
+
+<img src="https://github.com/rosberry/Foundation/blob/master/Assets/full_logo.png?raw=true" height="100" />
+
+This project is owned and maintained by [Rosberry](http://rosberry.com). We build mobile apps for users worldwide 🌏.
+
+Check out our [open source projects](https://github.com/rosberry), read [our blog](https://medium.com/@Rosberry) or give us a high-five on 🐦 [@rosberryapps](http://twitter.com/RosberryApps).
+
+## License
+
+**GooglePhotoProvider** is available under the MIT license. See the LICENSE file for more info.
