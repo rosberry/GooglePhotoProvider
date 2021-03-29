@@ -21,16 +21,17 @@ import com.rosberry.android.googlephotoprovider.model.CloudMediaPage
 import io.reactivex.Completable
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.a_main.*
 import rosberry.com.sample.converter.MediaConverter
 import rosberry.com.sample.entity.Media
 import rosberry.com.sample.entity.MediaPage
-import rosberry.com.sample.tools.CloudApiProvider.getCloudMediaApi
 import rosberry.com.sample.ui.EndlessScrollListener
 import rosberry.com.sample.ui.MediaAdapter
 import rosberry.com.sample.ui.MediaItemDecorator
 
-class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<Media> {
+class MainActivity : AppCompatActivity(),
+                     GooglePhotosPaginator.ViewController<Media> {
 
     companion object {
         private const val signInRequestCode = 60000
@@ -38,7 +39,11 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
     }
 
     private val cloudMediaProvider by lazy {
-        CloudMediaProvider(this, getCloudMediaApi(), BuildConfig.OAUTH_СLIENT_ID, BuildConfig.OAUTH_СLIENT_SECRET)
+        CloudMediaProvider(
+                this,
+                BuildConfig.OAUTH_СLIENT_ID,
+                BuildConfig.OAUTH_СLIENT_SECRET
+        )
     }
 
     private val mediaConverter by lazy {
@@ -47,7 +52,21 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
 
     private val mediaAdapter by lazy {
         val itemWidth = (resources.displayMetrics.widthPixels - padding) / SPAN_COUNT
-        MediaAdapter(itemWidth)
+        MediaAdapter(itemWidth) { media ->
+            cloudMediaProvider.downloadMedia(
+                    media.id,
+                    media.fullUri
+            )
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ uri ->
+                    Toast.makeText(
+                            this@MainActivity,
+                            "Successfully downloaded: $uri",
+                            Toast.LENGTH_SHORT
+                    ).show()
+                }, { t -> t.printStackTrace() })
+        }
     }
 
     private val googlePhotosPaginator by lazy {
@@ -69,10 +88,13 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
     }
 
     private val padding by lazy {
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, resources.displayMetrics)
+        TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                16f,
+                resources.displayMetrics
+        )
             .toInt()
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,7 +123,11 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
         startActivityForResult(signInIntent, signInRequestCode)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(
+            requestCode: Int,
+            resultCode: Int,
+            data: Intent?
+    ) {
         if (data != null && requestCode == signInRequestCode) {
             if (resultCode != Activity.RESULT_CANCELED) {
                 onSignInGoogleResult(data)
@@ -120,11 +146,15 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
             filter: MediaTypeFilter.MediaType,
             limit: Int,
             nextPageToken: String?
-    ): Single<MediaPage> = cloudMediaProvider.getCloudMediaPage(filter, limit, nextPageToken)
-        .map { cloudMediaPage -> cloudMediaPage.toMediaPage() }
+    ): Single<MediaPage> =
+            cloudMediaProvider.getCloudMediaPage(filter, limit, nextPageToken)
+                .map { cloudMediaPage -> cloudMediaPage.toMediaPage() }
 
     private fun CloudMediaPage.toMediaPage(): MediaPage {
-        return MediaPage(this.mediaList.fromCloudToMediaList(), this.nextPageToken)
+        return MediaPage(
+                this.mediaList.fromCloudToMediaList(),
+                this.nextPageToken
+        )
     }
 
     private fun List<CloudMedia>.fromCloudToMediaList(): List<Media> {
@@ -133,16 +163,24 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
 
     @SuppressLint("CheckResult")
     private fun Completable.handleSignIn() {
-        this.observeOn(AndroidSchedulers.mainThread())
+        this.subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
                     {
-                        Toast.makeText(this@MainActivity, "Successfully signed in", Toast.LENGTH_SHORT)
+                        Toast.makeText(
+                                this@MainActivity,
+                                "Successfully signed in",
+                                Toast.LENGTH_SHORT
+                        )
                             .show()
                         googlePhotosPaginator.restart()
                     },
                     { throwable ->
-                        Toast.makeText(this@MainActivity, "Sign in result error: ${throwable.message}",
-                                Toast.LENGTH_SHORT)
+                        Toast.makeText(
+                                this@MainActivity,
+                                "Sign in result error: ${throwable.message}",
+                                Toast.LENGTH_SHORT
+                        )
                             .show()
                     }
             )
@@ -168,5 +206,4 @@ class MainActivity : AppCompatActivity(), GooglePhotosPaginator.ViewController<M
 
     override fun showPageProgress(show: Boolean) {
     }
-
 }
